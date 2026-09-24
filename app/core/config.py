@@ -1,5 +1,4 @@
-from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -8,17 +7,13 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60
     thingspeak_channel_id: str = "3500405"
     thingspeak_read_api_key: str = ""
-    cors_origins: list[str] = ["http://localhost:5500"]
+    cors_origins: str = "http://localhost:5500"
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def split_origins(cls, v):
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 settings = Settings()
