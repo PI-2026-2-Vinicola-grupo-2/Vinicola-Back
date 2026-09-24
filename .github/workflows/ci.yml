@@ -9,6 +9,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      JWT_SECRET_KEY: chave-de-teste-para-ci
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: "60"
+      THINGSPEAK_CHANNEL_ID: "3500405"
+      THINGSPEAK_READ_API_KEY: ""
+      CORS_ORIGINS: http://localhost:5500
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
