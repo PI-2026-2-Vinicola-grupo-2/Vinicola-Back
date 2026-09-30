@@ -9,3 +9,5 @@ python-dotenv
 pytest
 httpx
 sqlalchemy
+email-validator
+slowapi

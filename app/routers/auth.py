@@ -5,6 +5,19 @@ from app.core.database import get_db
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.db_models import UsuarioDB
 from app.models.usuario import Token, UsuarioLogin, UsuarioRegistro
+from fastapi import Request
+
+from app.core.rate_limit import limiter
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+def register(request: Request, dados: UsuarioRegistro, db: Session = Depends(get_db)):
+    ...
+
+@router.post("/login", response_model=Token)
+@limiter.limit("10/minute")
+def login(request: Request, dados: UsuarioLogin, db: Session = Depends(get_db)):
+    ...
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -4,6 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.routers import auth, clima
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from app.core.rate_limit import limiter
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+if settings.environment == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 Base.metadata.create_all(bind=engine)
 
