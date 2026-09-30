@@ -125,5 +125,5 @@ Usuários e leituras climáticas estão em memória por enquanto (`app/routers/a
 
 ## Repositórios relacionados
 
-- [Vinicola-IoT](../Vinicola-IoT) — dispositivo ESP32 + DHT publicando no ThingSpeak
-- [Vinicola-Front](../Vinicola-Front) — dashboard que consome esta API
+- [Vinicola-IoT](https://github.com/PI-2026-2-Vinicola-grupo-2/Vinicola-IoT.git) — dispositivo ESP32 + DHT publicando no ThingSpeak
+- [Vinicola-Front](https://github.com/PI-2026-2-Vinicola-grupo-2/Vinicola-Front.git) — dashboard que consome esta API
