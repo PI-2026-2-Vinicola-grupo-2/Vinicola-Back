@@ -33,4 +33,4 @@ def login(request: Request, dados: UsuarioLogin, db: Session = Depends(get_db)):
     if not usuario or not verify_password(dados.senha, usuario.senha_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="E-mail ou senha inválidos")
     token = create_access_token(subject=usuario.email, role=usuario.perfil)
-    return Token(access_token=token)
+    return Token(access_token=token, nome=usuario.nome, perfil=usuario.perfil)

@@ -12,5 +12,8 @@ def clima_atual():
 
 
 @router.get("/historico")
-def clima_historico(resultados: int = 100, usuario=Depends(require_role("analista_dados", "administrador"))):
+def clima_historico(
+    resultados: int = 100,
+    usuario=Depends(require_role("produtor_exportador", "analista_dados", "administrador")),
+):
     return thingspeak_client.get_historico(resultados)

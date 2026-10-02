@@ -24,3 +24,5 @@ class UsuarioLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    nome: str
+    perfil: Perfil
