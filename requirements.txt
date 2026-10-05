@@ -11,3 +11,4 @@ httpx
 sqlalchemy
 email-validator
 slowapi
+psycopg2-binary
