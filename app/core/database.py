@@ -5,7 +5,7 @@ from app.core.config import settings
 
 if settings.db_host:
     DATABASE_URL = (
-        f"postgresql://{settings.db_user}:{settings.db_password}"
+        f"postgresql+psycopg2://{settings.db_user}:{settings.db_password}"
         f"@{settings.db_host}:{settings.db_port}/{settings.db_name}"
     )
     connect_args = {}
