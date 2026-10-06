@@ -1,129 +1,332 @@
-# Vinícola-Back
+# Vinícola — Backend
 
-API do Projeto Integrador "Vinícola" (Inteligência de Dados no Vale do São Francisco) — autentica usuários por perfil, consome o canal climático do ThingSpeak, persiste e trata os dados, e expõe tudo via REST pro Vinicola-Front consumir.
+API REST do **Projeto Integrador — Inteligência de Dados no Vale do São Francisco**.
 
-Não existe mais um repositório separado pro banco: a modelagem, as migrations e a lógica de ingestão de dados vivem aqui dentro, junto com a API.
+O backend é responsável pela autenticação dos usuários, controle de acesso, disponibilização dos dados climáticos e comunicação com os serviços utilizados pela solução.
+
+## Visão geral
+
+O backend foi desenvolvido com **Python e FastAPI** e está hospedado em produção no **Render**.
+
+O banco de dados utilizado em produção é o **PostgreSQL do Supabase**.
+
+```text
+ESP32 + DHT11
+      │
+      │ MQTT
+      ▼
+ThingSpeak
+      │
+      │ API REST
+      ▼
+FastAPI — Render
+      │
+      ├── JWT
+      ├── RBAC
+      ├── Rate Limiting
+      └── SQLAlchemy
+      │
+      ▼
+Supabase PostgreSQL
+      │
+      ▼
+Frontend
+```
+
+## Produção
+
+### API
+
+```text
+https://vinicola-back.onrender.com
+```
+
+### Banco de dados
+
+O banco de produção é fornecido pelo **Supabase**, utilizando PostgreSQL.
+
+As credenciais de conexão não ficam no código-fonte. No ambiente de produção, as variáveis necessárias devem ser configuradas no painel do Render.
+
+> Não publique no GitHub a senha do banco, a chave JWT, API Keys ou qualquer outro secret.
 
 ## Stack
 
-- Python 3.11 + FastAPI
-- PostgreSQL + SQLAlchemy + Alembic (migrations)
-- Autenticação JWT (`python-jose`) + RBAC por perfil
-- Pytest + GitHub Actions (CI a cada push/PR)
-- Consumo da API REST do ThingSpeak (`requests`)
+- **Python 3.11**
+- **FastAPI** — criação da API REST
+- **Uvicorn** — servidor ASGI
+- **SQLAlchemy** — acesso ao banco de dados
+- **PostgreSQL** — banco de dados
+- **Supabase** — serviço de banco PostgreSQL utilizado em produção
+- **python-jose** — JWT
+- **Passlib / bcrypt** — hash e verificação de senhas
+- **SlowAPI** — rate limiting
+- **Pydantic / Pydantic Settings** — validação e configuração
+- **Requests** — integração com a API do ThingSpeak
+- **Pytest** — testes
+- **GitHub Actions** — integração contínua
 
-## Como rodar localmente
+## Funcionalidades
 
-```bash
-git clone <url-do-repo>
-cd Vinicola-Back
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env           # preencha com os valores reais, inclusive o banco
-alembic upgrade head           # aplica as migrations no banco local
-uvicorn main:app --reload
-```
+### Autenticação
 
-A API sobe em `http://localhost:8000` e a documentação interativa (gerada automaticamente pelo FastAPI) fica em `http://localhost:8000/docs`.
+O sistema possui autenticação baseada em JWT.
 
-## Variáveis de ambiente
+O login valida o e-mail e a senha do usuário e retorna um token contendo informações necessárias para identificar o usuário e seu perfil.
 
-| variável | descrição |
-|---|---|
-| `JWT_SECRET_KEY` | chave usada pra assinar os tokens — nunca commitar o valor real |
-| `JWT_ALGORITHM` | algoritmo do JWT (padrão `HS256`) |
-| `JWT_EXPIRE_MINUTES` | validade do token em minutos |
-| `THINGSPEAK_CHANNEL_ID` | canal climático (`3500405`) |
-| `THINGSPEAK_READ_API_KEY` | chave de leitura do canal, se ele deixar de ser público |
-| `CORS_ORIGINS` | origens liberadas a chamar a API, separadas por vírgula |
-| `DB_HOST` | endereço do banco PostgreSQL |
-| `DB_PORT` | porta do banco (padrão `5432`) |
-| `DB_NAME` | nome do banco (`vinicola`) |
-| `DB_USER` | usuário do banco |
-| `DB_PASSWORD` | senha do banco — nunca commitar o valor real |
+### Controle de acesso — RBAC
 
-Os valores reais ficam só no `.env` local (ou em Secrets do GitHub/da nuvem) — o `.env.example` no repositório serve só de modelo.
-
-## Estrutura do projeto
-
-```
-Vinicola-Back/
-├── main.py                     # entrypoint FastAPI, CORS e routers
-├── requirements.txt
-├── .env.example
-├── alembic.ini                 # config das migrations
-├── alembic/
-│   └── versions/                 # histórico de migrations do banco
-├── .github/workflows/ci.yml    # roda pytest a cada push/PR
-└── app/
-    ├── core/
-    │   ├── config.py            # leitura das variáveis de ambiente
-    │   ├── security.py          # hash de senha, JWT, RBAC
-    │   └── database.py          # engine, sessionmaker, get_db()
-    ├── models/
-    │   ├── usuario.py            # schemas Pydantic (API)
-    │   └── db_models.py          # tabelas reais (SQLAlchemy): usuarios, leituras_climaticas, dados_mercado, previsoes, alertas
-    ├── routers/
-    │   ├── auth.py                # /auth/register, /auth/login
-    │   └── clima.py               # /clima/atual, /clima/historico
-    ├── services/
-    │   ├── thingspeak_client.py   # busca os dados no ThingSpeak
-    │   └── ingestion_service.py   # grava as leituras no banco periodicamente
-    └── tests/
-        └── test_health.py
-```
-
-## Autenticação e perfis
-
-Login retorna um JWT com o perfil do usuário embutido. Três perfis controlam o acesso às rotas:
+O backend trabalha com três perfis:
 
 - `produtor_exportador`
 - `analista_dados`
 - `administrador`
 
-Rotas sensíveis (como `/clima/historico`) exigem token válido de um perfil autorizado — ver `require_role()` em `core/security.py`.
+As permissões são verificadas no backend, impedindo que o frontend seja o responsável pela autorização real.
 
-## Rotas disponíveis
+### Rate limiting
 
-| rota | método | acesso |
-|---|---|---|
-| `/health` | GET | público |
-| `/auth/register` | POST | público |
-| `/auth/login` | POST | público |
-| `/clima/atual` | GET | público |
-| `/clima/historico` | GET | `analista_dados`, `administrador` |
+Algumas rotas possuem limitação de requisições para reduzir abuso e tentativas excessivas de acesso.
+
+### CORS
+
+As origens permitidas são configuradas através da variável `CORS_ORIGINS`.
+
+### HTTPS
+
+Em ambiente de produção, o backend pode redirecionar requisições HTTP para HTTPS através da configuração de produção.
+
+## Endpoints
+
+| Endpoint | Método | Acesso | Descrição |
+|---|---|---|---|
+| `/health` | GET | Público | Verifica se a API está disponível |
+| `/auth/register` | POST | Público | Cria uma conta de usuário |
+| `/auth/login` | POST | Público | Realiza autenticação |
+| `/clima/atual` | GET | Público | Retorna a última leitura climática |
+| `/clima/historico` | GET | `analista_dados`, `administrador` | Retorna o histórico climático |
+
+A documentação interativa do FastAPI fica disponível em:
+
+```text
+https://vinicola-back.onrender.com/docs
+```
+
+## Integração com ThingSpeak
+
+O backend consulta o canal climático do ThingSpeak para obter as leituras enviadas pelo dispositivo IoT.
+
+Canal utilizado:
+
+```text
+3500405
+```
+
+Os campos utilizados atualmente representam:
+
+| Campo | Informação |
+|---|---|
+| `field1` | Temperatura |
+| `field2` | Umidade |
+
+A integração está implementada em:
+
+```text
+app/services/thingspeak_client.py
+```
+
+## Banco de dados — Supabase
+
+O backend utiliza SQLAlchemy para comunicação com o PostgreSQL.
+
+Em produção, o PostgreSQL é disponibilizado pelo Supabase. A aplicação recebe os dados de conexão por variáveis de ambiente configuradas no Render.
+
+Variáveis utilizadas pelo projeto:
+
+| Variável | Finalidade |
+|---|---|
+| `DB_HOST` | Host do PostgreSQL |
+| `DB_PORT` | Porta do PostgreSQL |
+| `DB_NAME` | Nome do banco |
+| `DB_USER` | Usuário do banco |
+| `DB_PASSWORD` | Senha do banco |
+
+> Os valores reais dessas variáveis não devem ser publicados no repositório.
+
+## Variáveis de ambiente
+
+Exemplo de configuração:
+
+```env
+JWT_SECRET_KEY=chave-secreta-forte
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=60
+THINGSPEAK_CHANNEL_ID=3500405
+THINGSPEAK_READ_API_KEY=
+CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
+DB_HOST=
+DB_PORT=5432
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+ENVIRONMENT=development
+```
+
+Em produção, os valores devem ser configurados diretamente no ambiente do Render.
+
+## Estrutura do projeto
+
+```text
+Vinicola-Back/
+├── main.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── app/
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── rate_limit.py
+│   │   └── security.py
+│   ├── models/
+│   │   ├── db_models.py
+│   │   └── usuario.py
+│   ├── routers/
+│   │   ├── auth.py
+│   │   └── clima.py
+│   ├── services/
+│   │   └── thingspeak_client.py
+│   └── tests/
+│       └── test_health.py
+└── scripts/
+    └── benchmark_rbac.py
+```
+
+## Como executar localmente
+
+### 1. Clonar o repositório
+
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd Vinicola-Back
+```
+
+### 2. Criar ambiente virtual
+
+Windows:
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+Linux/macOS:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Instalar dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar o `.env`
+
+Crie o arquivo `.env` a partir do `.env.example` e informe as credenciais necessárias.
+
+Para utilizar o banco de produção, devem ser utilizados os dados de conexão fornecidos pelo Supabase. Não coloque esses dados no Git.
+
+### 5. Iniciar a API
+
+```bash
+uvicorn main:app --reload
+```
+
+A API ficará disponível em:
+
+```text
+http://localhost:8000
+```
+
+Documentação:
+
+```text
+http://localhost:8000/docs
+```
 
 ## Testes
+
+Execute:
 
 ```bash
 pytest
 ```
 
-O mesmo comando roda automaticamente no GitHub Actions a cada push/PR pra `main`.
+Os testes também são executados pelo GitHub Actions conforme a configuração de CI do projeto.
 
-## Responsabilidades dentro deste repositório
+## Deploy no Render
 
-- **Modelagem do banco** — `core/database.py`, `models/db_models.py`, migrations do Alembic
-- **Ingestão de dados** — `services/ingestion_service.py`, job periódico consumindo o `thingspeak_client.py`
-- **Segurança** — hardening de auth, secrets, RNF08/RNF10
-- **Qualidade & Integração** — testes, CI/CD, documentação
+O backend é hospedado no Render.
+
+De forma geral, o serviço deve utilizar:
+
+```text
+Build: pip install -r requirements.txt
+Start: uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+As variáveis de ambiente de produção devem ser cadastradas no próprio Render.
+
+O banco utilizado pelo serviço em produção é o PostgreSQL do Supabase.
+
+## Segurança
+
+Controles presentes no projeto:
+
+- autenticação JWT;
+- hash de senhas;
+- RBAC;
+- rate limiting;
+- CORS configurável;
+- secrets por variáveis de ambiente;
+- HTTPS em produção;
+- validação através de Pydantic.
+
+Nunca devem ser versionados:
+
+- `.env`;
+- senhas;
+- JWT Secret;
+- credenciais do Supabase/PostgreSQL;
+- API Keys do ThingSpeak;
+- credenciais MQTT.
 
 ## Status atual
 
-- [x] Estrutura do projeto, CI/CD e branch protection
-- [x] Configuração base e segurança (JWT, CORS)
-- [x] Autenticação e RBAC
-- [x] Integração com o ThingSpeak
-- [ ] Modelagem do banco e migrations (`models/db_models.py`, Alembic)
-- [ ] Ingestão automática das leituras (`services/ingestion_service.py`)
-- [ ] Modelo preditivo de janela de colheita (RF06)
-- [ ] Motor de alertas (RF09)
-- [ ] Relatórios de segurança e qualidade + testes finais
-
-Usuários e leituras climáticas estão em memória por enquanto (`app/routers/auth.py`) — trocam pelos models reais assim que `models/db_models.py` e as migrations estiverem prontos.
+- [x] API FastAPI
+- [x] Autenticação JWT
+- [x] RBAC
+- [x] Rate limiting
+- [x] CORS
+- [x] Integração com ThingSpeak
+- [x] Modelo de usuário no banco
+- [x] PostgreSQL em produção via Supabase
+- [x] API hospedada no Render
+- [x] Teste básico de health check
+- [x] CI com GitHub Actions
+- [ ] Evolução da persistência completa das leituras climáticas
+- [ ] Ingestão automática contínua das leituras
+- [ ] Modelo preditivo de janela de colheita
+- [ ] Motor de alertas integrado ao backend
+- [ ] Expansão dos testes automatizados
 
 ## Repositórios relacionados
 
-- [Vinicola-IoT](https://github.com/PI-2026-2-Vinicola-grupo-2/Vinicola-IoT.git) — dispositivo ESP32 + DHT publicando no ThingSpeak
-- [Vinicola-Front](https://github.com/PI-2026-2-Vinicola-grupo-2/Vinicola-Front.git) — dashboard que consome esta API
+- **Frontend:** Vinicola-Front — dashboard web que consome esta API.
+- **IoT:** Vinicola-IoT — ESP32 + DHT11 responsável pela coleta e envio das leituras ao ThingSpeak.
+- **Banco:** Supabase PostgreSQL — banco utilizado pelo backend em produção.
