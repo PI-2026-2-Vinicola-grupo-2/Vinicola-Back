@@ -14,6 +14,7 @@ def get_ultima_leitura() -> dict:
     return {
         "temperatura": dados.get("field1"),
         "umidade": dados.get("field2"),
+        "umidade_solo": dados.get("field3"),
         "registrado_em": dados.get("created_at"),
     }
 
@@ -27,6 +28,11 @@ def get_historico(resultados: int = 100) -> list[dict]:
     resposta.raise_for_status()
     feeds = resposta.json().get("feeds", [])
     return [
-        {"temperatura": f.get("field1"), "umidade": f.get("field2"), "registrado_em": f.get("created_at")}
+        {
+            "temperatura": f.get("field1"),
+            "umidade": f.get("field2"),
+            "umidade_solo": f.get("field3"),
+            "registrado_em": f.get("created_at"),
+        }
         for f in feeds
     ]

@@ -31,6 +31,7 @@ class LeituraClimatica(Base):
     id = Column(Integer, primary_key=True, index=True)
     temperatura = Column(Float, nullable=False)
     umidade = Column(Float, nullable=False)
+    umidade_solo = Column(Float, nullable=True)
     registrado_em = Column(DateTime(timezone=True), nullable=False, index=True)
     inserido_em = Column(DateTime(timezone=True), server_default=func.now())
 
