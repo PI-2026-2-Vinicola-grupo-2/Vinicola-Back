@@ -3,18 +3,19 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import require_role
+from app.models.clima import LeituraOut, SincronizacaoOut
 from app.services import thingspeak_client
 from app.services.ingestion_service import sincronizar_leituras
 
 router = APIRouter(prefix="/clima", tags=["clima"])
 
 
-@router.get("/atual")
+@router.get("/atual", response_model=LeituraOut)
 def clima_atual():
     return thingspeak_client.get_ultima_leitura()
 
 
-@router.get("/historico")
+@router.get("/historico", response_model=list[LeituraOut])
 def clima_historico(
     resultados: int = 100,
     usuario=Depends(require_role("produtor_exportador", "analista_dados", "administrador")),
@@ -22,7 +23,7 @@ def clima_historico(
     return thingspeak_client.get_historico(resultados)
 
 
-@router.post("/sincronizar")
+@router.post("/sincronizar", response_model=SincronizacaoOut)
 def sincronizar(
     resultados: int = 500,
     db: Session = Depends(get_db),
