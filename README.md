@@ -330,3 +330,10 @@ Nunca devem ser versionados:
 - **Frontend:** Vinicola-Front — dashboard web que consome esta API.
 - **IoT:** Vinicola-IoT — ESP32 + DHT11 responsável pela coleta e envio das leituras ao ThingSpeak.
 - **Banco:** Supabase PostgreSQL — banco utilizado pelo backend em produção.
+
+## Rotas integradas ao Front
+
+- `GET /alertas` — gera alertas a partir da leitura climática atual.
+- `GET /previsao/janela-colheita` — gera uma estimativa de 7 dias usando o histórico do ThingSpeak.
+
+A rota de previsão é uma etapa de integração. O modelo preditivo de Machine Learning definitivo pode substituir esse serviço quando houver histórico suficiente para treinamento e validação.
