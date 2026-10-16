@@ -29,6 +29,7 @@ class LeituraClimatica(Base):
     __tablename__ = "leituras_climaticas"
 
     id = Column(Integer, primary_key=True, index=True)
+    entry_id = Column(Integer, unique=True, index=True, nullable=True)
     temperatura = Column(Float, nullable=False)
     umidade = Column(Float, nullable=False)
     umidade_solo = Column(Float, nullable=True)
