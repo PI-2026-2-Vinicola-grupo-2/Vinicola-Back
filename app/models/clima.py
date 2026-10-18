@@ -9,6 +9,8 @@ class LeituraOut(BaseModel):
     umidade: float | None = None
     umidade_solo: float | None = None
     registrado_em: datetime | None = None
+    defasagem_minutos: int | None = None
+    desatualizado: bool = False
 
 
 class SincronizacaoOut(BaseModel):

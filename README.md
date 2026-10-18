@@ -103,7 +103,10 @@ Em ambiente de produção, o backend pode redirecionar requisições HTTP para H
 | `/auth/register` | POST | Público | Cria uma conta de usuário |
 | `/auth/login` | POST | Público | Realiza autenticação |
 | `/clima/atual` | GET | Público | Retorna a última leitura climática |
-| `/clima/historico` | GET | `analista_dados`, `administrador` | Retorna o histórico climático |
+| `/clima/historico` | GET | Autenticado | Retorna o histórico; aceita `horas` de 1 a 720 e `resultados` |
+| `/clima/sincronizar` | POST | `administrador` | Sincroniza leituras do ThingSpeak sem duplicar `entry_id` |
+| `/alertas` | GET | Autenticado | Retorna alertas calculados sobre a última leitura |
+| `/previsao/janela-colheita` | GET | Autenticado | Retorna projeção provisória da janela de colheita |
 
 A documentação interativa do FastAPI fica disponível em:
 
@@ -169,9 +172,20 @@ DB_NAME=
 DB_USER=
 DB_PASSWORD=
 ENVIRONMENT=development
+ALERTA_UMIDADE_ALTA=80
+ALERTA_UMIDADE_BAIXA=40
+ALERTA_TEMP_ALTA=32
+ALERTA_TEMP_BAIXA=18
+STALE_MINUTES=60
+ALERTA_SOLO_SECO=
 ```
 
 Em produção, os valores devem ser configurados diretamente no ambiente do Render.
+
+Os limiares de alerta são provisórios e devem ser validados com um técnico de campo.
+A previsão da janela de colheita é explicitamente provisória/simulada: usa médias
+do histórico disponível e não é um modelo preditivo. Com menos de sete dias de
+histórico, a confiança fica nula e os valores devem ser tratados como ilustrativos.
 
 ## Estrutura do projeto
 
@@ -263,11 +277,13 @@ http://localhost:8000/docs
 
 Execute:
 
-```bash
-pytest
+```powershell
+.venv\Scripts\pytest -v
 ```
 
-Os testes também são executados pelo GitHub Actions conforme a configuração de CI do projeto.
+Os testes usam SQLite em memória, desativam o rate limit e substituem o cliente
+ThingSpeak para não depender de acesso à internet. Eles também são executados
+pelo GitHub Actions conforme a configuração de CI do projeto.
 
 ## Deploy no Render
 

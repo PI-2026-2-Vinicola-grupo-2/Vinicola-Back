@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends
 
 from app.core.security import require_role
+from app.models.previsao import PrevisaoOut
 from app.services import thingspeak_client
 
 router = APIRouter(prefix="/previsao", tags=["previsao"])
@@ -28,7 +29,7 @@ def _pontuacao(temperatura, umidade):
     return max(0, min(100, round(score)))
 
 
-@router.get("/janela-colheita")
+@router.get("/janela-colheita", response_model=PrevisaoOut)
 def janela_colheita(
     usuario=Depends(require_role("produtor_exportador", "analista_dados", "administrador")),
 ):
@@ -37,6 +38,34 @@ def janela_colheita(
     umidades = [x.get("umidade") for x in historico]
     temp_media = _media(temperaturas)
     umi_media = _media(umidades)
+
+    timestamps = []
+    for x in historico:
+        reg = x.get("registrado_em")
+        if isinstance(reg, datetime):
+            timestamps.append(reg if reg.tzinfo else reg.replace(tzinfo=timezone.utc))
+        elif isinstance(reg, str):
+            try:
+                timestamps.append(datetime.fromisoformat(reg.replace("Z", "+00:00")))
+            except ValueError:
+                pass
+
+    if len(timestamps) >= 2:
+        dias_de_historico = abs((max(timestamps) - min(timestamps)).days)
+    else:
+        dias_de_historico = 0
+
+    metodo = "Projeção provisória baseada na média do histórico, NÃO é um modelo preditivo."
+
+    if dias_de_historico < 7:
+        confianca = None
+        aviso = (
+            "Histórico insuficiente (menos de 7 dias de leituras). "
+            "Os valores apresentados são meramente ilustrativos."
+        )
+    else:
+        confianca = 60
+        aviso = "Projeção baseada na média do histórico recente."
 
     agora = datetime.now(timezone.utc)
     dias = []
@@ -58,7 +87,10 @@ def janela_colheita(
     melhor = max(dias, key=lambda x: x["pontuacao"])
     return {
         "melhor_dia": melhor["data"],
-        "confianca": 60 if historico else 20,
-        "metodo": "estimativa baseada no histórico do ThingSpeak",
+        "confianca": confianca,
+        "metodo": metodo,
         "dias": dias,
+        "simulado": True,
+        "dias_de_historico": dias_de_historico,
+        "aviso": aviso,
     }

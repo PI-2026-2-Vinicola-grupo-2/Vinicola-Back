@@ -19,6 +19,14 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env")
 
+    # Limiares PROVISÓRIOS, a validar com técnico de campo.
+    alerta_umidade_alta: float = 80.0
+    alerta_umidade_baixa: float = 40.0
+    alerta_temp_alta: float = 32.0
+    alerta_temp_baixa: float = 18.0
+    stale_minutes: int = 60
+    alerta_solo_seco: float | None = None
+
     environment: str = "development"
 
 
