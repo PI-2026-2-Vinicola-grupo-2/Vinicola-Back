@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class Perfil(str, Enum):
@@ -10,15 +10,15 @@ class Perfil(str, Enum):
 
 
 class UsuarioRegistro(BaseModel):
-    nome: str
+    nome: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    senha: str
+    senha: str = Field(min_length=8, max_length=72)
     perfil: Perfil
 
 
 class UsuarioLogin(BaseModel):
     email: EmailStr
-    senha: str
+    senha: str = Field(min_length=1)
 
 
 class Token(BaseModel):
