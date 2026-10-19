@@ -213,7 +213,13 @@ Vinicola-Back/
 │   ├── services/
 │   │   └── thingspeak_client.py
 │   └── tests/
-│       └── test_health.py
+│       ├── conftest.py
+│       ├── test_health.py
+│       ├── test_auth.py
+│       ├── test_clima.py
+│       ├── test_alertas.py
+│       ├── test_previsao.py
+│       └── test_thingspeak.py
 └── scripts/
     └── benchmark_rbac.py
 ```
@@ -333,13 +339,12 @@ Nunca devem ser versionados:
 - [x] Modelo de usuário no banco
 - [x] PostgreSQL em produção via Supabase
 - [x] API hospedada no Render
-- [x] Teste básico de health check
+- [x] Testes automatizados de autenticação, clima, alertas, previsão e ThingSpeak
 - [x] CI com GitHub Actions
-- [ ] Evolução da persistência completa das leituras climáticas
+- [x] Persistência das leituras climáticas via sincronização sob demanda
 - [ ] Ingestão automática contínua das leituras
 - [ ] Modelo preditivo de janela de colheita
-- [ ] Motor de alertas integrado ao backend
-- [ ] Expansão dos testes automatizados
+- [x] Motor de alertas integrado ao backend
 
 ## Repositórios relacionados
 
@@ -349,7 +354,9 @@ Nunca devem ser versionados:
 
 ## Rotas integradas ao Front
 
+- `GET /clima/atual` — retorna a leitura mais recente e a indicação de defasagem.
+- `GET /clima/historico?horas=24|168|720` — retorna histórico autenticado.
 - `GET /alertas` — gera alertas a partir da leitura climática atual.
 - `GET /previsao/janela-colheita` — gera uma estimativa de 7 dias usando o histórico do ThingSpeak.
 
-A rota de previsão é uma etapa de integração. O modelo preditivo de Machine Learning definitivo pode substituir esse serviço quando houver histórico suficiente para treinamento e validação.
+A rota de previsão é deliberadamente simulada: usa médias do histórico e regras de pontuação, não um modelo de Machine Learning. Ela só poderá ser substituída por um modelo preditivo após haver histórico suficiente para treinamento e validação.
